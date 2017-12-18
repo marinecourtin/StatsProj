@@ -5,6 +5,24 @@ date: "18 décembre 2017"
 output: html_document
 ---
 
+```{r echo=FALSE}
+`%>%` <- magrittr::`%>%`
+```
+
+```{r load_func}
+source("functions.R")
+```
+
+
+# How verbs behave in Nigerian Pidgin and English
+
+# 1. Introduction
+
+ADD DESCRIPTION DATA ANALYSIS PROBLEM
+
+## 1.1 Cleaning the data
+
+## 1.2 Brief overview
 
 ```{r import_data}
 gov <- rbind(read.table("../../projet/R_input/verbs_that_are_gov_naija.csv", 
@@ -13,5 +31,81 @@ gov <- rbind(read.table("../../projet/R_input/verbs_that_are_gov_naija.csv",
 dep <- rbind(read.table("../../projet/R_input/verbs_that_are_dep_naija.csv", 
                  header = TRUE), read.table("../../projet/R_input/verbs_that_are_dep_english.csv", 
                  header = TRUE))
+
+gov_en <- gov %>% dplyr::filter(language=="english")
+gov_pcm <- gov %>% dplyr::filter(language=="naija")
+
+dep_en <- dep %>% dplyr::filter(language=="english")
+dep_pcm <- dep %>% dplyr::filter(language=="naija")
 ```
 
+First let's say we want to have a brief look at our data, to get an overview of the syntactic combinations of verbs in English and in Nigerian Pidgin.
+
+```{r english}
+# verbe : governor; span_dep
+summary(gov_en[,setdiff(names(gov_en),c("token_id"))])
+
+# verb : dependent; span_gov
+summary(dep_en[,setdiff(names(dep_en),c("token_id"))])
+```
+```{r naija}
+summary(gov_pcm[,setdiff(names(gov_pcm),c("token_id"))])
+
+summary(dep_pcm[,setdiff(names(dep_pcm),c("token_id"))])
+```
+
+From these tables we can gather that :
+
++ we have a lot more data on English than on Nigerian Pidgin (which might cause some trouble for us later on)
++ for both languages, there are more instances of a verb having its dependent on its left side (see the median), however in English the mean span is positive. This observation, in combination with our remark on the median would indicate that in English governor-dependent relations which are directed on the right have greaters span than those directed towards the left.
++ verbs have a lot of nominal and pronominal dependents.
++ governors of verbs are often either verbs themselves or nouns
++ verbs often have their governor on their left in both languages.
+
+
+## 1.3 Plan for the data analysis
+
+#### looking at spans
+
+The first feature we will be looking at is __spans__. A positive span indicates that the token is on the right of the reference verb it is linked to, while a negative spans indicates that the token is on the left. The absolute value of the span represents the distance between the reference verb and the other token, for example if the span is equal to one, then the token immediately follows the reference verb.
+
+We will distinguish two types of spans :
++ span_dep : the span between a verb and its dependent
++ span_gov : the span between a governor and its verb-dependent
+
+For each type of span, we want to look at the divergence in their distribution depending on the language.
+
+When we look at the distribution of both groups for span_dep, the unbalanced number of observations in each group make it difficult to see if there is a difference. To remediate this problem, we will draw a subset of the "english" group to match the number of observations in the "naija" group.
+
+```{r span_dep}
+ggplot2::ggplot(gov, ggplot2::aes(x=`span`, fill=language)) +
+  ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
+  ggplot2::xlim(c(-15, 15))
+
+set.seed(1)
+subset_gov <- gov %>% dplyr::filter(language=="english") %>% .[sample(1:nrow(.), nrow(dplyr::filter(gov, language=="naija")),replace=FALSE),] %>% rbind(., gov_pcm)
+
+ggplot2::ggplot(subset_gov, ggplot2::aes(x=`span`, fill=language)) +
+  ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
+  ggplot2::xlim(c(-15, 15))
+
+```
+And now doing the same thing for span_gov :
+```{r span_gov}
+ggplot2::ggplot(dep, ggplot2::aes(x=`span`, fill=language)) +
+  ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
+  ggplot2::xlim(c(-15, 15))
+
+set.seed(1)
+subset_dep <- dep %>% dplyr::filter(language=="english") %>% .[sample(1:nrow(.), nrow(dplyr::filter(dep, language=="naija")),replace=FALSE),] %>% rbind(., dep_pcm)
+
+ggplot2::ggplot(subset_dep, ggplot2::aes(x=`span`, fill=language)) +
+  ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
+  ggplot2::xlim(c(-15, 15))
+
+```
+
++ span : mean average, standard deviation, use a statistic of probability distribution divergence between the two languages, for each measure (one that handles zeroes well; some examples are KL and Jensen-Shannon, but these do *not* handle zeroes well; have a look at Gibbs and Su 2002 for some discussion). Get a bootstrap sampling distribution for this divergence statistic for the feature Span_Dependent and examine a confidence interval. Do the same for the other feature, Span_Governor. You'll see that one of them separates the two better on average, but you might also see that one of them has bad properties like a confidence interval overlapping with zero (which wouldn't be good) or having a very high standard error. And you might want to throw that feature out. I then suggested you could do something even better, which would be, for each bootstrap sample, to rank the divergences across measures, and then use this ranking as your test variable. You could see how stable the ranking is, and rank the features based only on stable pairwise rankings.
+Now recall your job is also to test your analysis. Thus, you need to find a way to simulate cases where you know how well the features are doing relative to one another and see how reliably your analysis recovers this order, for example.
+
+#### 
