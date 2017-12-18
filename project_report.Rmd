@@ -1,0 +1,17 @@
+---
+title: "Project"
+author: "Marine Courtin"
+date: "18 décembre 2017"
+output: html_document
+---
+
+
+```{r import_data}
+gov <- rbind(read.table("../../projet/R_input/verbs_that_are_gov_naija.csv", 
+                 header = TRUE), read.table("../../projet/R_input/verbs_that_are_gov_english.csv", 
+                 header = TRUE))
+dep <- rbind(read.table("../../projet/R_input/verbs_that_are_dep_naija.csv", 
+                 header = TRUE), read.table("../../projet/R_input/verbs_that_are_dep_english.csv", 
+                 header = TRUE))
+```
+
