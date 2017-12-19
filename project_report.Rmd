@@ -70,6 +70,7 @@ From these tables we can gather that :
 The first feature we will be looking at is __spans__. A positive span indicates that the token is on the right of the reference verb it is linked to, while a negative spans indicates that the token is on the left. The absolute value of the span represents the distance between the reference verb and the other token, for example if the span is equal to one, then the token immediately follows the reference verb.
 
 We will distinguish two types of spans :
+
 + span_dep : the span between a verb and its dependent
 + span_gov : the span between a governor and its verb-dependent
 
@@ -88,7 +89,6 @@ subset_gov <- gov %>% dplyr::filter(language=="english") %>% .[sample(1:nrow(.),
 ggplot2::ggplot(subset_gov, ggplot2::aes(x=`span`, fill=language)) +
   ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
   ggplot2::xlim(c(-15, 15))
-
 ```
 And now doing the same thing for span_gov :
 ```{r span_gov}
@@ -104,6 +104,55 @@ ggplot2::ggplot(subset_dep, ggplot2::aes(x=`span`, fill=language)) +
   ggplot2::xlim(c(-15, 15))
 
 ```
+
+When looking at the histograms with a comparable number of observations from both groups, the distributions of the two languages seem pretty similar for both the span_dep and span_gov measure. We want to check whether the distributions are really similar or if they just look like they are. In order to do this we will procede as follows when selecting span_dep as our discrete random variable:
+
++ we define our sample space (the set of the possible values for the random variable) as the interval between the biggest positive and negative values for span_dep.
++ we then compute the probability that span_dep is equal to some value based on the English data, for every value in our sample space.
++ we then repeat this step for the Naija data.
++ we measure the divergence in the probability distributions between the two -> this will give us the relative entropy of the probability distribution of spans in the data on Naija with respect to the probability distribution of the spans in the English data. The relative entropy measure was introduced by Kullback and Leibler (1951).
++ we create fake data in which the two groups share the same source of variability in relation to span_dep. For each iteration, we compute the relative entropy measure (our test statistics).
++ we plot the results with the fake data and compare with the observed result obtained with the real data. If this shows that the observed result would be unlikely with made up data, then we conclude that looking at the relative entropy of span_dep is pertinent.
+
+Since one of our goals is to explore different features and metrics (or measures of distance) which might allow us to separate both groups we will then repeat these steps with the span_gov variable, to see if one of the two feature (span_dep and span_gov) is a better predictor.
+
+Now we have a plan, unfortunately if we follow up with it, we will soon realize that there is a problem with the measure od distance we have selected. We will find that some values of span_dep and span_gov have a probability of 0 for one of the groups (since these spans aren't necessarily attested for both groups). We could of course take these values out of our sample space, but it would seem a bit unfair. What if having this type of span was very characteristic of one of our languages ? Therefore I have decided to use another measure of distance : the Wasserstein metric.
+
+I first tried writing my own functions (see `proba_spans` in the function file) before realizing there was a package which implemented the wasserstein metric when given two vectors as input.
+
+```{r distance_distrib_proba_span}
+wasserstein_gov_obs <- transport::wasserstein1d(gov_en[["span"]], gov_pcm[["span"]])
+
+```
+
+I then went on to build my fake data so as to observe the result of this test statistics :
+
+```{r}
+
+wasserstein_gov_fake <- wasserstein_table(200, gov, "english", "naija", "span")
+print(plot_permuted_wasserstein(wasserstein_gov_fake, wasserstein_gov_obs))
+```
+
+So we have results from our fake data. Now we want to generate more samples from our original data, to see what other values of our metric could have been obtained from a similar distribution as the distribution we observed. We then plot the results, adding indicators for the 1st quantile, 2rd quantile and median (the red lines). The black line serves as a reminder of the value of our metric in the original data.
+
+```{r}
+w <- wasserstein_bootstrapped(2000, gov_en[["span"]], gov_pcm[["span"]])
+plot_metric_w_q(w, wasserstein_gov_obs, WessersteinMetric)
+```
+
+
+We can see that the results are generally between 0.75 and 0.95 (I have not found an explanation as for why there is some results > 1, this shouldn't have happened since the results of this metric are supposed to be in a [0,1] range. This is very different from the results we got when permuting the language label, which would negate the null hypothesis (remember that we're looking for a combination of feature + metric which will be able to easily separate our two groups). According to both plots the combination of span_dep and the Wasserstein metric is able to do just that.
+
+We now want to retrace our step, this time using the span_gov measures instead.
+
+```{r}
+nb_data <- nrow(dep_pcm)
+print(nb_data)
+wasserstein_dep_obs <- transport::wasserstein1d(dep_en[["span"]][1:nb_data], dep_pcm[["span"]])
+print(wasserstein_dep_obs)
+```
+
+
 
 + span : mean average, standard deviation, use a statistic of probability distribution divergence between the two languages, for each measure (one that handles zeroes well; some examples are KL and Jensen-Shannon, but these do *not* handle zeroes well; have a look at Gibbs and Su 2002 for some discussion). Get a bootstrap sampling distribution for this divergence statistic for the feature Span_Dependent and examine a confidence interval. Do the same for the other feature, Span_Governor. You'll see that one of them separates the two better on average, but you might also see that one of them has bad properties like a confidence interval overlapping with zero (which wouldn't be good) or having a very high standard error. And you might want to throw that feature out. I then suggested you could do something even better, which would be, for each bootstrap sample, to rank the divergences across measures, and then use this ranking as your test variable. You could see how stable the ranking is, and rank the features based only on stable pairwise rankings.
 Now recall your job is also to test your analysis. Thus, you need to find a way to simulate cases where you know how well the features are doing relative to one another and see how reliably your analysis recovers this order, for example.
