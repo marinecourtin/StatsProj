@@ -85,8 +85,7 @@ wasserstein_table <- function(n_samples, data, lang1, lang2, var) {
 wasserstein_bootstrapped <- function(N_SAMPLES, data_1, data_2) {
   w <- rep(0, N_SAMPLES)
   for (i in 1:N_SAMPLES) {
-  # we sample the same amount from both groups (data_2 is smaller so we use it's length as the basis)
-  data_1_sampled <- sample(data_1, length(data_2), replace=TRUE)
+  data_1_sampled <- sample(data_1, length(data_1), replace=TRUE)
   data_2_sampled <- sample(data_2, length(data_2), replace=TRUE)
   w[i] <-transport::wasserstein1d(data_1_sampled, data_2_sampled)
   }
@@ -130,7 +129,7 @@ plot_permuted_wasserstein <- function(data, observed_value) {
   # but passing the column name as it is or as a string causes problems
   # and for some reason I couldn't get the UQ function (which I have used in the past for similar situations) to work
   p <- ggplot2::ggplot(data, ggplot2::aes(x=WassersteinMetric)) +
-    ggplot2::geom_histogram(fill="#FFD86D", colour="black")
+    ggplot2::geom_histogram(fill="#FFD86D", colour="black", binwidth = 0.01)
   p <- p + ggplot2::geom_vline(xintercept=observed_value, lwd=1, lty="dashed")
   return(p)
 }

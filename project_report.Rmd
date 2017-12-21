@@ -18,9 +18,16 @@ source("functions.R")
 
 # 1. Introduction
 
-ADD DESCRIPTION DATA ANALYSIS PROBLEM
+In the project proposal, I described this data analysis problem as the comparison of the behaviour of verbs in Nigerian Pidgin and English. Initially I wanted to look at both the span of dependencies, and the types of the dependencies involving verbs. However doing this analysis, I realized that lookign at this problem using only spans would probably give more interesting results, as I have more data on them. Indeed, if we look at at the types of dependencies there is necessarily a lot more dispersion since there are around 30 types of dependencies (and even more if you take into account non-universal subtypes of syntactic relations). I also did not use the ngrams of part-of-speech that I had collected, as their addition probably would have distracted from the points I wanted to make on the spans. However these informations are still present in the tables I extracted from the treebanks, and could be used for future observations.
+
+To summarize, I'm going to look at the spans for both verbs which are governor and verbs which are dependents, in both languages. A positive span indicates that a token is on the right of the reference verb it is linked to (exemple in _I ate an apple_, ate->apple has a positive span), while a negative span indicates that the token is on the left (in the same sentence I<-ate has a negative span. The absolute value of the span represents the distance between the reference verb and the other token, for example if the span is equal to one, then the token immediately follows the reference verb.
 
 ## 1.1 Cleaning the data
+
+One quick note I want to mention is that I modified the treebanks so that punctuations were not included in the dependency trees. The reasoning behind this choice relates to the use of the punctuation marks in the Naija treebank to mark information relative to macro-syntax and prosody (as it is based on oral speech and part of the project's objective is to study the syntax-prosody interface), while in the English treebank, they encode typical punctuation marks. So taking into account these tokens  would have exagerated differences which had nothing to do with syntax but rather with the encoding of informations of a different nature.
+
+The treebanks of universal dependency (UD) use a set of "universal" (i.e shared by all treebanks) syntactic relation labels. In addition, developpers of treebanks may add a subtype to this relation, to encode information which might not be covered by the universal set but that they deem important (for example compound is a universal relation, to which you can add the subtype :svc to encode serial verb constructions, which gives you the relation compound:svc). Since these subtypes were not shared by both treebanks I stripped them from the relation types, leaving me with only the "universal", comparable relations.
+
 
 ## 1.2 Brief overview
 
@@ -65,18 +72,14 @@ From these tables we can gather that :
 
 ## 1.3 Plan for the data analysis
 
-#### looking at spans
+As I mentionned previously, we will be focussing on the spans of dependencies involving verbs.For this purpose, we will distinguish two types of spans :
 
-The first feature we will be looking at is __spans__. A positive span indicates that the token is on the right of the reference verb it is linked to, while a negative spans indicates that the token is on the left. The absolute value of the span represents the distance between the reference verb and the other token, for example if the span is equal to one, then the token immediately follows the reference verb.
++ span_dep : span of a dependency between a verb and its dependent (i.e the verb is the governor)
++ span_gov : span of a dependency between a governor and its verb-dependent (i.e the verb if the dependent)
 
-We will distinguish two types of spans :
+For each type of span, we want to look at the divergence in their distribution depending on the language. That is to say, we want to see if the distribution are "similar" (whatever that means) or if they are different enough that we could make an hypothesis on the language of the treebank based on the distribution of its spans' values. If the latter is true, that mean we might for example be able to reconstitute the language of a delexicalized treebank. 
 
-+ span_dep : the span between a verb and its dependent
-+ span_gov : the span between a governor and its verb-dependent
-
-For each type of span, we want to look at the divergence in their distribution depending on the language.
-
-When we look at the distribution of both groups for span_dep, the unbalanced number of observations in each group make it difficult to see if there is a difference. To remediate this problem, we will draw a subset of the "english" group to match the number of observations in the "naija" group.
+When we look at the distribution of both groups for the variable span_dep, the unbalanced number of observations in each group make it difficult to see if there is an actual difference between the two groups. To remediate this problem, we will draw a subset of the "english" group to match the number of observations in the "naija" group and plot both distributions on the same histogram. Here's the result we get :
 
 ```{r span_dep}
 ggplot2::ggplot(gov, ggplot2::aes(x=`span`, fill=language)) +
@@ -90,7 +93,10 @@ ggplot2::ggplot(subset_gov, ggplot2::aes(x=`span`, fill=language)) +
   ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
   ggplot2::xlim(c(-15, 15))
 ```
-And now doing the same thing for span_gov :
+
+
+
+We now apply the same method to plot the distribution of values for the variable span_gov :
 ```{r span_gov}
 ggplot2::ggplot(dep, ggplot2::aes(x=`span`, fill=language)) +
   ggplot2::geom_histogram(ggplot2::aes(y=..count..),alpha=0.5, bins=30, colour="black", position="identity") +
@@ -105,35 +111,37 @@ ggplot2::ggplot(subset_dep, ggplot2::aes(x=`span`, fill=language)) +
 
 ```
 
-When looking at the histograms with a comparable number of observations from both groups, the distributions of the two languages seem pretty similar for both the span_dep and span_gov measure. We want to check whether the distributions are really similar or if they just look like they are. In order to do this we will procede as follows when selecting span_dep as our discrete random variable:
+When looking at the histograms with a comparable number of observations for both groups, the distributions of the two languages seem pretty similar for both the span_dep and span_gov variables. We want to check whether the distributions are really similar or if they just look like they are. In order to do this we will procede as follows selecting first span_dep as our discrete random variable:
 
 + we define our sample space (the set of the possible values for the random variable) as the interval between the biggest positive and negative values for span_dep.
 + we then compute the probability that span_dep is equal to some value based on the English data, for every value in our sample space.
 + we then repeat this step for the Naija data.
-+ we measure the divergence in the probability distributions between the two -> this will give us the relative entropy of the probability distribution of spans in the data on Naija with respect to the probability distribution of the spans in the English data. The relative entropy measure was introduced by Kullback and Leibler (1951).
++ we measure the divergence in the probability distributions between the two -> this will give us the relative entropy[^1] of the probability distribution of spans in the data on Naija with respect to the probability distribution of the spans in the English data. 
 + we create fake data in which the two groups share the same source of variability in relation to span_dep. For each iteration, we compute the relative entropy measure (our test statistics).
 + we plot the results with the fake data and compare with the observed result obtained with the real data. If this shows that the observed result would be unlikely with made up data, then we conclude that looking at the relative entropy of span_dep is pertinent.
 
+[^1]: The relative entropy measure was introduced by Kullback and Leibler (1951).
+
 Since one of our goals is to explore different features and metrics (or measures of distance) which might allow us to separate both groups we will then repeat these steps with the span_gov variable, to see if one of the two feature (span_dep and span_gov) is a better predictor.
 
-Now we have a plan, unfortunately if we follow up with it, we will soon realize that there is a problem with the measure od distance we have selected. We will find that some values of span_dep and span_gov have a probability of 0 for one of the groups (since these spans aren't necessarily attested for both groups). We could of course take these values out of our sample space, but it would seem a bit unfair. What if having this type of span was very characteristic of one of our languages ? Therefore I have decided to use another measure of distance : the Wasserstein metric.
+This was the initial plan for our analysis. Unfortunately if we follow up with it, we will soon realize that there is a problem with the measure od distance we have selected. We will find that some values of span_dep and span_gov have a probability of 0 for one of the groups (since these spans aren't necessarily attested for both groups). We could of course take these values out of our sample space, but it would seem a bit unfair. What if having this type of span was very characteristic of one of our languages ? Instead, we will substitute this measure of distance for another which allows for zeroes : the Wasserstein metric.
 
-I first tried writing my own functions (see `proba_spans` in the function file) before realizing there was a package which implemented the wasserstein metric when given two vectors as input.
+I first tried writing my own functions (see `proba_spans` in the function file) before realizing there was a package which implemented the wasserstein metric when given two vectors as input. The function I used is `transport::wasserstein1d`.
 
 ```{r distance_distrib_proba_span}
 wasserstein_gov_obs <- transport::wasserstein1d(gov_en[["span"]], gov_pcm[["span"]])
 
 ```
 
-I then went on to build my fake data so as to observe the result of this test statistics :
+I then went on to build some fake data, with permuted languages, so as to compare the result of this test statistic when the two groups are identical in relation to our variable (fake data) and when they might not be (original data):
 
 ```{r}
 
-wasserstein_gov_fake <- wasserstein_table(200, gov, "english", "naija", "span")
+wasserstein_gov_fake <- wasserstein_table(2000, gov, "english", "naija", "span")
 print(plot_permuted_wasserstein(wasserstein_gov_fake, wasserstein_gov_obs))
 ```
 
-So we have results from our fake data. Now we want to generate more samples from our original data, to see what other values of our metric could have been obtained from a similar distribution as the distribution we observed. We then plot the results, adding indicators for the 1st quantile, 2rd quantile and median (the red lines). The black line serves as a reminder of the value of our metric in the original data.
+So we have results from our fake data. Now we want to generate more samples from our original data, to see what other values of our metric could have been obtained from a similar distribution as the distribution we observed. Our original data showed one specific distribution, which gives a specific result when comparing Wasserstein distances. However, we could have had another similar distribution (i.e with the same underlying distribution but with somare variations) which would have given a different result. This technique called boostrapping aims at giving us an idea of the type of result we could have reasonably obtained with the same underlying distribution. We then plot the results, adding indicators for the 1st quantile, 2rd quantile and median (the red lines). The black line serves as a reminder of the value of our metric in the original data.
 
 ```{r}
 w <- wasserstein_bootstrapped(2000, gov_en[["span"]], gov_pcm[["span"]])
@@ -141,7 +149,7 @@ plot_metric_w_q(w, wasserstein_gov_obs, WessersteinMetric)
 ```
 
 
-We can see that the results are generally between 0.75 and 0.95 (I have not found an explanation as for why there is some results > 1, this shouldn't have happened since the results of this metric are supposed to be in a [0,1] range. This is very different from the results we got when permuting the language label, which would negate the null hypothesis (remember that we're looking for a combination of feature + metric which will be able to easily separate our two groups). According to both plots the combination of span_dep and the Wasserstein metric is able to do just that.
+We can see that the results are generally between 0.75 and 0.95. This is very different from the results we got when permuting the language label, which would negate the null hypothesis (remember that we're looking for a combination of feature + metric which will be able to easily separate our two groups). According to both plots the combination of span_dep and the Wasserstein metric is able to do just that.
 
 We now want to retrace our step, this time using the span_gov measures instead.
 
