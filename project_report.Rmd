@@ -173,26 +173,36 @@ print(wasserstein_dep_obs)
 This second variable gives better results to distinguish both groups. In the original data we observe a value of  
 We now have results based based on the Wasserstein distance. Next, we want to look at another distance which might be suited to this type of task, which is the Euclidean distance.
 
-here is my attempt at computing the Euclidean distance for every pair of spans in span_dep seemed to failed because the table it created was too big. The first histogram shows distances in the same group, while the second one shows distances between different groups.
+Here is my attempt at computing the Euclidean distance for every pair of spans in span_dep. Using the full data was impossible as it returned an error message from R saying the dataframe was too much for the memory to handle. Therefore I used this method onyl on a sample of the original data (which might not give very accurate results). The first histogram shows distances in the same group, while the second one shows distances between different groups.
 
 ```{r}
 
-gov_sample <- gov[sample(nrow(gov), 2000), ]
+gov_sample <- gov[sample(nrow(gov), 5000), ]
 gov_sample$ID <- seq.int(nrow(gov_sample))
 table_gov <- gov_sample %>% dplyr::select(language, span, ID) %>% dplyr::mutate(k=1)
 table_gov_2 <- table_gov %>% dplyr::full_join(table_gov, by="k") %>% dplyr::filter(ID.x != ID.y) %>% dplyr::mutate(dist = sqrt((span.x - span.y)^2 + (span.x - span.y)^2))
 
 
-same_group <- table_gov_2 %>% dplyr::filter(language.x == language.y) %>% dplyr::select(language.x, dist)
+same_group <- table_gov_2 %>% dplyr::filter(language.x == language.y) %>% dplyr::select(language.x, language.y, dist) 
+print(same_group)
+nb_min <- same_group %>% dplyr::filter(language.x=="naija") %>% nrow(.)
+same_group_2 <- same_group %>% dplyr::filter(language.x=="english") %>% dplyr::sample_n(.,nb_min)
+same_group_2 <- same_group_2 + dplyr::filter(same_group, language.x=="naija")
+
 different_group <- table_gov_2 %>% dplyr::filter(language.x != language.y) %>% dplyr::select(language.x, dist)
 
 plot_euclidean_distances <- function(data1) {
   ggplot2::ggplot(data1, ggplot2::aes(x=dist)) +
-    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=0.01, bins=80)
+    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=1)
 }
 
-print(plot_euclidean_distances(same_group))
+print(plot_euclidean_distances(same_group_2))
 print(plot_euclidean_distances(different_group))
+
+
+print(summary(same_group_2))
+
+print(summary(different_group))
 ```
 
-
+Thanks to the summary tables, we can see that 
