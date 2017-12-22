@@ -108,7 +108,7 @@ plot_metric_w_q <- function(data, observed_med, column_name) {
   median <- quantile(data, 0.5)
   third_q <- quantile(data, 0.975)
   ggplot2::ggplot(tibble::tibble(column_name=data), ggplot2::aes(x=data)) +
-    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=0.01) +
+    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=0.01, bins=80) +
     ggplot2::geom_vline(xintercept=first_q, color="red", lty="dashed") +
     ggplot2::geom_vline(xintercept=third_q, color="red", lwd=1, lty="dashed") +
     ggplot2::geom_vline(xintercept=observed_med, color="black", lty="dashed", lwd=1) +

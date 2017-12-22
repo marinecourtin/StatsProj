@@ -133,25 +133,31 @@ wasserstein_gov_obs <- transport::wasserstein1d(gov_en[["span"]], gov_pcm[["span
 
 ```
 
-I then went on to build some fake data, with permuted languages, so as to compare the result of this test statistic when the two groups are identical in relation to our variable (fake data) and when they might not be (original data):
+I then went on to build some fake data, with permuted languages, so as to compare the result of this test statistic when the two groups are identical in relation to our variable (fake data) and when they might not be (original data). This is called permutation and allows us to see what our distributions would look like in tha case of a null hypothesis (i.e when the groups are identical in relation to a source of variability). In our analysis, we know that both groups are different (as they are based on treebanks of different languages, whose syntax is different). However what we do not know is whether they are significatively different in relation to the spans of dependency, and if so which of the feature span_dep and span_gov allows us to best separate both groups.
 
-```{r}
+Here are the results in the case of a null hypothesis (for span_dep):
+
+```{r, cache=TRUE}
 
 wasserstein_gov_fake <- wasserstein_table(2000, gov, "english", "naija", "span")
 print(plot_permuted_wasserstein(wasserstein_gov_fake, wasserstein_gov_obs))
 ```
 
-So we have results from our fake data. Now we want to generate more samples from our original data, to see what other values of our metric could have been obtained from a similar distribution as the distribution we observed. Our original data showed one specific distribution, which gives a specific result when comparing Wasserstein distances. However, we could have had another similar distribution (i.e with the same underlying distribution but with somare variations) which would have given a different result. This technique called boostrapping aims at giving us an idea of the type of result we could have reasonably obtained with the same underlying distribution. We then plot the results, adding indicators for the 1st quantile, 2rd quantile and median (the red lines). The black line serves as a reminder of the value of our metric in the original data.
+So we now have results from our fake data. The next step consists in generating more samples from our original data, to see what other values of our metric could have been obtained from a similar distribution as the distribution we observed. Our original data showed one specific distribution, which gives a specific result when comparing Wasserstein distances. However, we could have had another similar distribution (i.e with the same underlying distribution but with somare variations) which would have given a different result. This technique called boostrapping aims at giving us an idea of the type of result we could have reasonably obtained with the same underlying distribution. We then plot the results, adding indicators for the 1st quantile, 2rd quantile and median (the red lines). The black line serves as a reminder of the value of our metric in the original data.
 
 ```{r}
 w <- wasserstein_bootstrapped(2000, gov_en[["span"]], gov_pcm[["span"]])
-plot_metric_w_q(w, wasserstein_gov_obs, WessersteinMetric)
+p <- plot_metric_w_q(w, wasserstein_gov_obs, WessersteinMetric) +
+  ggplot2::ggplot(w, ggplot2::aes(x=WassersteinMetric)) +
+    ggplot2::geom_histogram(fill="#FFD86D", colour="black", alpha=0.5)
+print(p)
+
 ```
 
 
 We can see that the results are generally between 0.75 and 0.95. This is very different from the results we got when permuting the language label, which would negate the null hypothesis (remember that we're looking for a combination of feature + metric which will be able to easily separate our two groups). According to both plots the combination of span_dep and the Wasserstein metric is able to do just that.
 
-We now want to retrace our step, this time using the span_gov measures instead.
+We now want to retrace our steps, this time using the span_gov measures instead, so as to see if one of these variables is a better predictor than the other.
 
 ```{r}
 nb_data <- nrow(dep_pcm)
@@ -161,8 +167,11 @@ print(wasserstein_dep_obs)
 ```
 
 
+We now have results based based on the Wasserstein distance. Next, we want to look at another distance which might be suited to this type of task, which is the Euclidean distance.
 
-+ span : mean average, standard deviation, use a statistic of probability distribution divergence between the two languages, for each measure (one that handles zeroes well; some examples are KL and Jensen-Shannon, but these do *not* handle zeroes well; have a look at Gibbs and Su 2002 for some discussion). Get a bootstrap sampling distribution for this divergence statistic for the feature Span_Dependent and examine a confidence interval. Do the same for the other feature, Span_Governor. You'll see that one of them separates the two better on average, but you might also see that one of them has bad properties like a confidence interval overlapping with zero (which wouldn't be good) or having a very high standard error. And you might want to throw that feature out. I then suggested you could do something even better, which would be, for each bootstrap sample, to rank the divergences across measures, and then use this ranking as your test variable. You could see how stable the ranking is, and rank the features based only on stable pairwise rankings.
-Now recall your job is also to test your analysis. Thus, you need to find a way to simulate cases where you know how well the features are doing relative to one another and see how reliably your analysis recovers this order, for example.
+ADD BLURB + calculs
 
-#### 
+
+ADD BLURB on statistical power + statistic power for each combination Wasserstein(span_dep, span_gov), Euclidean(span_dep, span_gov).
+
+ADD  conclusion and perspectives
