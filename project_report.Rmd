@@ -138,6 +138,7 @@ Here are the results in the case of a null hypothesis (for span_dep):
 ```{r, cache=TRUE}
 
 wasserstein_gov_fake <- wasserstein_table(2000, gov, "english", "naija", "span")
+print(summary(wasserstein_gov_fake))
 print(plot_permuted_wasserstein(wasserstein_gov_fake, wasserstein_gov_obs))
 ```
 
@@ -168,6 +169,7 @@ plot_metric_w_q(w_2, wasserstein_dep_obs, WessersteinMetric)
 
 ```{r}
 print(wasserstein_dep_obs)
+print(summary(wasserstein_dep_fake))
 ```
 
 This second variable gives better results to distinguish both groups. In the original data we observe a value of  
@@ -177,7 +179,7 @@ Here is my attempt at computing the Euclidean distance for every pair of spans i
 
 ```{r}
 
-gov_sample <- gov[sample(nrow(gov), 5000), ]
+gov_sample <- gov[sample(nrow(gov), 7000), ]
 gov_sample$ID <- seq.int(nrow(gov_sample))
 table_gov <- gov_sample %>% dplyr::select(language, span, ID) %>% dplyr::mutate(k=1)
 table_gov_2 <- table_gov %>% dplyr::full_join(table_gov, by="k") %>% dplyr::filter(ID.x != ID.y) %>% dplyr::mutate(dist = sqrt((span.x - span.y)^2 + (span.x - span.y)^2))
@@ -191,8 +193,10 @@ same_group_2 <- same_group_2 + dplyr::filter(same_group, language.x=="naija")
 different_group <- table_gov_2 %>% dplyr::filter(language.x != language.y) %>% dplyr::select(language.x, dist)
 
 plot_euclidean_distances <- function(data1) {
-  ggplot2::ggplot(data1, ggplot2::aes(x=dist)) +
-    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=1)
+  ggplot2::ggplot(data1, ggplot2::aes(x=dist, y=(..count..)/sum(..count..))) +
+    ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=0.5) +
+    ggplot2::ylim(c(0, 0.25)) +
+    ggplot2::xlim(c(0, 35)) + ggplot2::labs(x="Euclidean distance between a pair of points", y="frequency")
 }
 
 print(plot_euclidean_distances(same_group_2))
@@ -200,15 +204,8 @@ print(plot_euclidean_distances(different_group))
 
 ```
 
-```{r}
-print(summary(same_group_2))
-
-print(summary(different_group))
-```
-
-
-The results I obtained in the summary table seem off. I think that might have to do with how I sampled the spans, without regards for the distribution of languages in the original data. The number of measures is also very different because of the way I measured the distance between every pair of point( some results between english/naija and naija/english are therefore duplicated). I have decided not to use these measurements (which i added a bit too late) in my analysis, as i do not think I can rely on them.
-
+From what we can see, the euclidean distance is greater when the pair of points are drawn from different groups (there is a rather larger percentage of distances is in the intervale [4,8], whereas when the pair of points are drawn from the same group (i.e the same language) most distance are in the interval [0,5]
+x
 ### Conclusion
 
 Based on the data analysis I tried to propose, the most interesting variable to study seemed to be span_dep, which means that the dependent of verbal-governors allowed us to separate both groups of observation more easily than the span_gov variable. In order to observe this I used the Wasserstein metric which allowed me to measure the divergence in the probability distribution of spans for both languages. In the future, I would to investigate other measures, such as the Euclidean distance, and observe the influence of other variables (for example the type of the dependencies considered, the part-of-speech of preceding and following tokens, both informations that i had hoped to measure the impact of when i wrote the proposal for this project).
