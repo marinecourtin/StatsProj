@@ -177,7 +177,7 @@ We now have results based based on the Wasserstein distance. Next, we want to lo
 
 Here is my attempt at computing the Euclidean distance for every pair of spans in span_dep. Using the full data was impossible as it returned an error message from R saying the dataframe was too much for the memory to handle. Therefore I used this method on a sample of the original data (which might not give very accurate results). The first histogram shows distances in the same group, while the second one shows distances between different groups.
 
-```{r}
+```{r span_dep_euclidean}
 
 gov_sample <- gov[sample(nrow(gov), 7000), ]
 gov_sample$ID <- seq.int(nrow(gov_sample))
@@ -192,6 +192,7 @@ same_group_2 <- same_group_2 + dplyr::filter(same_group, language.x=="naija")
 
 different_group <- table_gov_2 %>% dplyr::filter(language.x != language.y) %>% dplyr::select(language.x, dist)
 
+
 plot_euclidean_distances <- function(data1) {
   ggplot2::ggplot(data1, ggplot2::aes(x=dist, y=(..count..)/sum(..count..))) +
     ggplot2::geom_histogram(fill="#579ECF", colour="black", binwidth=0.5) +
@@ -205,7 +206,35 @@ print(plot_euclidean_distances(different_group))
 ```
 
 From what we can see, the euclidean distance is greater when the pair of points are drawn from different groups (there is a rather larger percentage of distances is in the intervale [4,8], whereas when the pair of points are drawn from the same group (i.e the same language) most distance are in the interval [0,5]
-x
+
+
+
+To complete our analysis, we repeat the last steps (i.e measuring the euclidean distance between pair of points), this time observing the span_gov variable.
+
+```{r span_gov_euclidean}
+
+dep_sample <- dep[sample(nrow(dep), 7000), ]
+dep_sample$ID <- seq.int(nrow(dep_sample))
+table_dep <- dep_sample %>% dplyr::select(language, span, ID) %>% dplyr::mutate(k=1)
+table_dep_2 <- table_dep %>% dplyr::full_join(table_dep, by="k") %>% dplyr::filter(ID.x != ID.y) %>% dplyr::mutate(dist = sqrt((span.x - span.y)^2 + (span.x - span.y)^2))
+
+
+same_group_dep <- table_dep_2 %>% dplyr::filter(language.x == language.y) %>% dplyr::select(language.x, language.y, dist) 
+nb_min_dep <- same_group_dep %>% dplyr::filter(language.x=="naija") %>% nrow(.)
+same_group_dep_2 <- same_group_dep %>% dplyr::filter(language.x=="english") %>% dplyr::sample_n(.,nb_min_dep)
+same_group_dep_2 <- same_group_dep_2 + dplyr::filter(same_group_dep, language.x=="naija")
+
+different_group_dep <- table_dep_2 %>% dplyr::filter(language.x != language.y) %>% dplyr::select(language.x, dist, language.y)
+
+
+print(plot_euclidean_distances(same_group_dep_2))
+print(plot_euclidean_distances(different_group_dep))
+
+```
+
+
+
+
 ### Conclusion
 
-Based on the data analysis I tried to propose, the most interesting variable to study seemed to be span_dep, which means that the dependent of verbal-governors allowed us to separate both groups of observation more easily than the span_gov variable. In order to observe this I used the Wasserstein metric which allowed me to measure the divergence in the probability distribution of spans for both languages. In the future, I would to investigate other measures, such as the Euclidean distance, and observe the influence of other variables (for example the type of the dependencies considered, the part-of-speech of preceding and following tokens, both informations that i had hoped to measure the impact of when i wrote the proposal for this project).
+Based on the data analysis I tried to propose, the most interesting variable to study seemed to be span_dep, which means that the dependent of verbal-governors allowed us to separate both groups of observation more easily than the span_gov variable. In order to observe this I used the Wasserstein metric which allowed me to measure the divergence in the probability distribution of spans for both languages. In the future, I would to investigate other measures, and observe the influence of other variables (for example the type of the dependencies considered, the part-of-speech of preceding and following tokens, both informations that i had hoped to measure the impact of when i wrote the proposal for this project). I also would have liked to integrate a test to check the statistical power of the different combinations of statistic + variable I proposed, in order to single out the bet one, and quantify its efficacity.
